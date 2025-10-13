@@ -1,0 +1,7 @@
+flask
+pandas
+openpyxl
+requests
+urllib3
+xls2xlsx
+gunicorn
