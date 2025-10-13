@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file 
 import pandas as pd
 import requests
 import traceback
@@ -15,11 +15,12 @@ API_BASE = "https://boolchand.slscanada.ca:9001"
 USERNAME = "Vp6697S3ydmGo4t5gE"
 PASSWORD = "zHyHN8jtABzWHQ68%v"
 CUSTOMER_CODE = "boolchand"
-STORE_CODE = "C1"  # ✅ Curaçao Store
+STORE_CODE = "C1"  # ✅ Curaçao store code
 
-# === Curaçao Tax Configuration (by Merch Dept) ===
-NINE_PERCENT_MERCH_DEPTS = ["1610", "1640"]  # 9% tax for Phones + Gaming
-DEFAULT_TAX_RATE = 0.06  # 6% for everything else
+# === Tax configuration ===
+# 9% for Merch Dept 1610 (phones) and 1640 (gaming)
+# 6% for everything else
+NINE_PERCENT_MERCH = ["1610", "1640"]
 
 # === Clean Excel string helper ===
 _illegal_unichrs = [(0x00, 0x08), (0x0B, 0x0C), (0x0E, 0x1F), (0x7F, 0x9F)]
@@ -69,7 +70,7 @@ def update_esl(items):
 
         # === Retry once on 401 Unauthorized ===
         if response.status_code == 401:
-            print("🔁 Token expired, retrying with new token...")
+            print("🔁 Token may have expired, retrying with new token...")
             token = get_token()
             response = send_request(batch, token)
 
@@ -101,7 +102,14 @@ def convert_excel():
         if file.filename == '':
             return "Empty filename", 400
 
-        df = pd.read_excel(file, skiprows=1, dtype=str)
+        # === Support .xls or .xlsx, skip first line ===
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext in ['.xls', '.xlsx']:
+            engine = 'openpyxl' if file_ext == '.xlsx' else 'xlrd'
+            df = pd.read_excel(file, skiprows=1, dtype=str, engine=engine)
+        else:
+            return "Unsupported file format. Please upload .xls or .xlsx", 400
+
         print("🧾 Columns in uploaded Excel:", df.columns.tolist())
 
         items = []
@@ -115,25 +123,25 @@ def convert_excel():
 
                 # === Determine TAX RATE (based on Merch Dept) ===
                 merch_dept = str(row.get('Merch Dept', '')).strip()
-                if merch_dept in NINE_PERCENT_MERCH_DEPTS:
+                if merch_dept in NINE_PERCENT_MERCH:
                     tax_rate = 0.09
                 else:
-                    tax_rate = DEFAULT_TAX_RATE
+                    tax_rate = 0.06
 
                 # === PRICE CALCULATIONS ===
-                price1 = int(round(retail * (1 + tax_rate)))  # price incl. tax
+                price1 = int(round(retail * (1 + tax_rate)))  # with tax
                 price2 = round(price1 / 1.8)
 
                 # === MSRP → price3 ===
                 try:
-                    msrp_raw = row.get('MSRP', None)
+                    msrp_raw = row['MSRP']
                     if pd.notna(msrp_raw):
                         msrp_value = float(msrp_raw)
                         if not msrp_value.is_integer():
                             price3 = 0
                         else:
                             msrp_int = int(msrp_value)
-                            if msrp_int <= price1:
+                            if msrp_int == price1 or msrp_int < price1:
                                 price3 = 0
                             else:
                                 price3 = msrp_int
@@ -151,7 +159,6 @@ def convert_excel():
                 )
                 stock = int(float(row[stock_column])) if stock_column and pd.notna(row[stock_column]) else 0
 
-                # === Build item payload ===
                 item = {
                     "IIS_COMMAND": "UPDATE",
                     "sku": sku,
@@ -166,9 +173,8 @@ def convert_excel():
 
                 cleaned_item = {k: clean_excel_string(v) for k, v in item.items()}
                 items.append(cleaned_item)
-
             except Exception as row_error:
-                print(f"⚠️ Skipping row due to error: {row_error}")
+                print(f"⚠️ Skipping row: {row_error}")
 
         if not items:
             return "No valid items found.", 400
