@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file 
+from flask import Flask, request, jsonify, send_file
 import pandas as pd
 import requests
 import traceback
@@ -17,10 +17,13 @@ PASSWORD = "zHyHN8jtABzWHQ68%v"
 CUSTOMER_CODE = "boolchand"
 STORE_CODE = "C1"  # ✅ Curaçao store code
 
-# === Tax configuration ===
-# 9% for Merch Dept 1610 (phones) and 1640 (gaming)
-# 6% for everything else
-NINE_PERCENT_MERCH = ["1610", "1640"]
+# === Tax configuration based on Product Class ===
+NINE_PERCENT_CLASSES = [
+    "APPLE PHONES",
+    "OTHER PHONES",
+    "SAMSUNG PHONES",
+    "GAMINNG TITLES"
+]
 
 # === Clean Excel string helper ===
 _illegal_unichrs = [(0x00, 0x08), (0x0B, 0x0C), (0x0E, 0x1F), (0x7F, 0x9F)]
@@ -121,9 +124,9 @@ def convert_excel():
                 brand = str(row['Brand Name']).strip()
                 retail = float(row['Current Retail'])
 
-                # === Determine TAX RATE (based on Merch Dept) ===
-                merch_dept = str(row.get('Merch Dept', '')).strip()
-                if merch_dept in NINE_PERCENT_MERCH:
+                # === Determine TAX RATE (based on Product Class) ===
+                product_class = str(row.get('Product Class', '')).strip().upper()
+                if product_class in NINE_PERCENT_CLASSES:
                     tax_rate = 0.09
                 else:
                     tax_rate = 0.06
