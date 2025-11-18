@@ -22,7 +22,7 @@ NINE_PERCENT_CLASSES = [
     "APPLE PHONES",
     "OTHER PHONES",
     "SAMSUNG PHONES",
-    "GAMINNG TITLES"
+    "GAMING TITLES"
 ]
 
 # === Clean Excel string helper ===
@@ -216,3 +216,4 @@ def download_last_xlsx():
 
 if __name__ == '__main__':
     app.run()
+
