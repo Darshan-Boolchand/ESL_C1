@@ -19,7 +19,7 @@ STORE_CODE = "C1"  # ✅ Curaçao store code
 
 # === Tax configuration based on Product Class ===
 NINE_PERCENT_CLASSES = [
-    "APPLE PHONES",
+    "APPLE IPHONES",
     "OTHER PHONES",
     "SAMSUNG PHONES",
     "GAMING TITLES"
@@ -216,4 +216,5 @@ def download_last_xlsx():
 
 if __name__ == '__main__':
     app.run()
+
 
