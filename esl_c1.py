@@ -66,13 +66,13 @@ def update_esl(items):
     batch_size = 1000
 
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
-        print(f"📦 Sending batch {i // batch_size + 1} with {len(batch)} items")
+        batch = items[i:i+batch_size]
+        print(f"📦 Sending batch {i//batch_size + 1} with {len(batch)} items")
 
         response = send_request(batch, token)
 
         if response.status_code == 401:
-            print("🔁 Token expired, retrying...")
+            print("🔁 Token may have expired, retrying with new token...")
             token = get_token()
             response = send_request(batch, token)
 
@@ -83,7 +83,7 @@ def update_esl(items):
 
         print("📡 API Response:", response.status_code, response.text)
         responses.append({
-            "batch": i // batch_size + 1,
+            "batch": i//batch_size + 1,
             "status": response.status_code,
             "response": res_json
         })
@@ -111,7 +111,7 @@ def convert_excel():
         else:
             return "Unsupported file format", 400
 
-        print("🧾 Columns:", df.columns.tolist())
+        print("🧾 Columns in uploaded Excel:", df.columns.tolist())
 
         items = []
         for _, row in df.iterrows():
@@ -128,15 +128,16 @@ def convert_excel():
                 price1 = int(round(retail * (1 + tax_rate)))
                 price2 = round(price1 / 1.8)
 
-                # === MSRP → price3 (allow .5 only) ===
+                # === MSRP → price3 (0.5 allowed, >1 must be whole) ===
                 try:
                     msrp_raw = row['MSRP']
                     if pd.notna(msrp_raw):
                         msrp_value = float(msrp_raw)
 
-                        if msrp_value.is_integer() or msrp_value * 2 == int(msrp_value * 2):
-                            price3_value = round(msrp_value, 1)
-                            price3 = price3_value if price3_value > price1 else 0
+                        if msrp_value == 0.5:
+                            price3 = 0.5 if msrp_value > price1 else 0
+                        elif msrp_value > 1 and msrp_value.is_integer():
+                            price3 = int(msrp_value) if msrp_value > price1 else 0
                         else:
                             price3 = 0
                     else:
@@ -175,7 +176,6 @@ def convert_excel():
         df_mapped.to_excel("mapped.xlsx", index=False)
 
         status, result = update_esl(items)
-
         return jsonify({
             "status": status,
             "total_items": len(items),
@@ -191,12 +191,7 @@ def convert_excel():
 def download_last_xlsx():
     if not os.path.exists("mapped.xlsx"):
         return "mapped.xlsx not found", 404
-    return send_file(
-        "mapped.xlsx",
-        download_name="mapped.xlsx",
-        as_attachment=True,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    return send_file("mapped.xlsx", as_attachment=True)
 
 if __name__ == '__main__':
     app.run()
