@@ -128,20 +128,10 @@ def convert_excel():
                 price1 = int(round(retail * (1 + tax_rate)))
                 price2 = round(price1 / 1.8)
 
-                # === MSRP → price3 (0.5 allowed, >1 must be whole) ===
+                # === MSRP → price3 (TAKE MSRP AS-IS) ===
                 try:
                     msrp_raw = row['MSRP']
-                    if pd.notna(msrp_raw):
-                        msrp_value = float(msrp_raw)
-
-                        if msrp_value == 0.5:
-                            price3 = 0.5 if msrp_value > price1 else 0
-                        elif msrp_value > 1 and msrp_value.is_integer():
-                            price3 = int(msrp_value) if msrp_value > price1 else 0
-                        else:
-                            price3 = 0
-                    else:
-                        price3 = 0
+                    price3 = float(msrp_raw) if pd.notna(msrp_raw) else 0
                 except:
                     price3 = 0
 
@@ -191,7 +181,12 @@ def convert_excel():
 def download_last_xlsx():
     if not os.path.exists("mapped.xlsx"):
         return "mapped.xlsx not found", 404
-    return send_file("mapped.xlsx", as_attachment=True)
+    return send_file(
+        "mapped.xlsx",
+        download_name="mapped.xlsx",
+        as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 if __name__ == '__main__':
     app.run()
