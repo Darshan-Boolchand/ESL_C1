@@ -66,8 +66,8 @@ def update_esl(items):
     batch_size = 1000
 
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
-        print(f"📦 Sending batch {i // batch_size + 1} with {len(batch)} items")
+        batch = items[i:i+batch_size]
+        print(f"📦 Sending batch {i//batch_size + 1} with {len(batch)} items")
 
         response = send_request(batch, token)
 
@@ -83,7 +83,7 @@ def update_esl(items):
 
         print("📡 API Response:", response.status_code, response.text)
         responses.append({
-            "batch": i // batch_size + 1,
+            "batch": i//batch_size + 1,
             "status": response.status_code,
             "response": res_json
         })
@@ -128,14 +128,10 @@ def convert_excel():
                 price1 = int(round(retail * (1 + tax_rate)))
                 price2 = round(price1 / 1.8)
 
-                # === MSRP → price3 (TAKE MSRP, BUT NOT < price1) ===
+                # === MSRP → price3 (TAKE MSRP AS-IS) ===
                 try:
                     msrp_raw = row['MSRP']
-                    if pd.notna(msrp_raw):
-                        price3_value = float(msrp_raw)
-                        price3 = price3_value if price3_value >= price1 else 0
-                    else:
-                        price3 = 0
+                    price3 = float(msrp_raw) if pd.notna(msrp_raw) else 0
                 except:
                     price3 = 0
 
