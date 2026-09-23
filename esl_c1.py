@@ -128,10 +128,29 @@ def convert_excel():
                 price1 = int(round(retail * (1 + tax_rate)))
                 price2 = round(price1 / 1.8)
 
-                # === MSRP → price3 (TAKE MSRP AS-IS) ===
+                # === MSRP → price3 ===
+                # price3 = 1  -> sentinel flag: Prismart template shows red label, no "before" price
+                # price3 = 0  -> no MSRP / no special styling
+                # price3 = N  -> genuine "before" price shown as strikethrough markdown (only when N > price1)
                 try:
-                    msrp_raw = row['MSRP']
-                    price3 = float(msrp_raw) if pd.notna(msrp_raw) else 0
+                    msrp_raw = row.get('MSRP', None)
+                    if pd.notna(msrp_raw):
+                        msrp_value = float(msrp_raw)
+
+                        if msrp_value == 1:
+                            # Sentinel: pass the red-label/no-before-price flag straight through,
+                            # bypassing the price1 comparison below.
+                            price3 = 1
+                        elif not msrp_value.is_integer():
+                            price3 = 0
+                        else:
+                            msrp_int = int(msrp_value)
+                            if msrp_int <= price1:
+                                price3 = 0
+                            else:
+                                price3 = msrp_int
+                    else:
+                        price3 = 0
                 except:
                     price3 = 0
 
